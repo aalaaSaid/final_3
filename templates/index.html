@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Video Stream</title>
+    <style>
+      .video-container {
+        display: flex;
+      }
+
+      .video {
+        margin-right: 20px; /* Adjust spacing between videos */
+      }
+    </style>
+  </head>
+  <body>
+    <div class="video-container">
+      <video
+        id="video1"
+        class="video"
+        width="640"
+        height="480"
+        autoplay
+      ></video>
+      <video
+        id="video2"
+        class="video"
+        width="640"
+        height="480"
+        autoplay
+      ></video>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.3.1/socket.io.js"></script>
+    <script>
+      var socket = io.connect(
+        "http://" + document.domain + ":" + location.port
+      );
+
+      navigator.mediaDevices
+        .getUserMedia({ video: true })
+        .then((stream) => {
+          const video = document.getElementById("video1");
+          video.srcObject = stream;
+          const canvas = document.createElement("canvas");
+          const ctx = canvas.getContext("2d");
+          canvas.width = video.width;
+          canvas.height = video.height;
+
+          setInterval(() => {
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const frame = canvas.toDataURL("image/jpeg", 0.5);
+            socket.emit("video_frame", frame, 10);
+          }, 100); // Adjust frame capture frequency as needed
+        })
+        .catch((error) => {
+          console.error("Error accessing media devices:", error);
+        });
+
+      socket.on("generated_frame", (frame) => {
+        const video = document.getElementById("video2");
+        video.src = "data:image/jpeg;base64," + frame;
+        console.log("Received frame", frame);
+      });
+    </script>
+  </body>
+</html>
